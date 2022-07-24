@@ -1,22 +1,48 @@
-#creat an IAM role
-resource "aws_iam_role" "ops_role" {
-  name = "ops_role"
+resource "aws_iam_role" "role" {
+  name = "ons-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Sid    = ""
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
       },
-    ]
-  })
-
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
 }
+EOF
+}
+
+resource "aws_iam_policy" "policy" {
+  name        = "ons-policy"
+  description = "A test policy"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "ec2:Describe*"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "ons-attach" {
+  role       = aws_iam_role.role.name
+  policy_arn = aws_iam_policy.policy.arn
+}
+
 
 # Create 2 EC2 instances
 
@@ -27,7 +53,7 @@ resource "aws_instance" "instance" {
   subnet_id            = element(aws_subnet.public_subnet.*.id, count.index)
   security_groups      = [aws_security_group.sg.id, ]
   key_name             = "EC2Tutorial"
-  iam_instance_profile = data.aws_iam_role.iam_role.name
+  iam_instance_profile = ons.aws_iam_role.iam_role.name
 
   tags = {
     "Name"        = "Instance-${count.index}"
